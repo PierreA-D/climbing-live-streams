@@ -1,0 +1,44 @@
+services:
+  mediamtx:
+    container_name: climbing-live-streaming-mediamtx
+    image: bluenviron/mediamtx:latest
+    restart: unless-stopped
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    volumes:
+      - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
+    ports:
+      - '1935:1935'   # RTMP ingest
+      - '8554:8554'   # RTSP ingest/read
+      - '8890:8890/udp' # SRT ingest
+      - '8189:8189/udp' # WebRTC ICE/UDP
+      - '9997:9997'   # MediaMTX API
+
+  webrtc-hls-gateway:
+    container_name: climbing-live-streaming-gateway
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - mediamtx
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - '8888:8888'   # HLS HTTP
+      - '8889:8889'   # WebRTC HTTP/WHEP/WHIP
+
+  ffmpeg-worker:
+    container_name: climbing-live-streaming-ffmpeg-worker
+    image: jrottenberg/ffmpeg:6.1-alpine
+    restart: unless-stopped
+    profiles:
+      - workers
+    depends_on:
+      - mediamtx
+    environment:
+      - SOURCE_URL=
+      - TARGET_URL=
+      - VIDEO_CODEC=copy
+      - AUDIO_CODEC=aac
+    volumes:
+      - ./ffmpeg/worker.sh:/work/worker.sh:ro
+    entrypoint: ["/bin/sh", "/work/worker.sh"]

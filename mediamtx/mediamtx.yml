@@ -1,0 +1,28 @@
+api: yes
+apiAddress: :9997
+
+authMethod: http
+authHTTPAddress: http://host.docker.internal:3000/api/internal/mediamtx/auth
+authHTTPExclude:
+  - action: api
+  - action: metrics
+  - action: pprof
+
+hls: yes
+hlsAddress: :8888
+hlsVariant: mpegts
+hlsSegmentDuration: 2s
+hlsSegmentCount: 7
+
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+
+rtmp: yes
+rtmpAddress: :1935
+
+rtsp: yes
+rtspAddress: :8554
+
+srt: yes
+srtAddress: :8890

@@ -26,3 +26,9 @@ rtspAddress: :8554
 
 srt: yes
 srtAddress: :8890
+
+pathDefaults:
+  source: publisher
+
+paths:
+  all_others: {}

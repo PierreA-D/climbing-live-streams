@@ -22,9 +22,11 @@ services:
       - mediamtx
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/mediamtx/server.crt:/etc/nginx/certs/server.crt:ro
+      - ./certs/mediamtx/server.key:/etc/nginx/certs/server.key:ro
     ports:
       - '8888:8888'   # HLS HTTP
-      - '8889:8889'   # WebRTC HTTP/WHEP/WHIP
+      - '8889:8889'   # WebRTC HTTPS/WHEP/WHIP
 
   ffmpeg-worker:
     container_name: climbing-live-streaming-ffmpeg-worker

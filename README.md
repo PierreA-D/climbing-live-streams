@@ -34,7 +34,7 @@ Ports exposés:
 - 8890/udp (SRT)
 - 8189/udp (WebRTC ICE)
 - 8888 (HLS via gateway)
-- 8889 (WebRTC HTTP via gateway)
+- 8889 (WebRTC HTTPS via gateway)
 - 9997 (API MediaMTX)
 
 ## Worker FFmpeg
@@ -66,3 +66,7 @@ Dans `climbing-live`, configurer:
 MediaMTX appelle l'endpoint d'auth du front:
 
 - `http://host.docker.internal:3000/api/internal/mediamtx/auth`
+
+Le gateway Nginx termine TLS pour WebRTC sur le port 8889 en re-utilisant le certificat local
+de `../climbing-live/certs/mediamtx`. Les URLs de publication/lecture WebRTC doivent donc
+utiliser `https://<host>:8889/...`.

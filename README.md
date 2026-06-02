@@ -42,10 +42,10 @@ La configuration active aussi une authentification HTTP déléguée vers l'appli
 
 Le gateway publie deux entrées externes :
 
-- 8888 pour HLS en HTTP
+- 8888 pour HLS en HTTPS
 - 8889 pour WebRTC en HTTPS
 
-Le port 8889 termine TLS avec le certificat monté depuis [certs/mediamtx](certs/mediamtx).
+Les ports 8888 et 8889 terminent TLS avec le certificat monté depuis [certs/mediamtx](certs/mediamtx).
 
 ### Worker FFmpeg
 
@@ -92,6 +92,30 @@ Arrêter la stack :
 docker compose down
 ```
 
+## Production
+
+Le fichier [docker-compose.prod.yml](docker-compose.prod.yml) est la variante recommandée pour une exposition publique.
+
+Il apporte les différences suivantes :
+
+- MediaMTX est piné sur une version explicite
+- le gateway Nginx est piné sur une version explicite
+- l'API MediaMTX n'est plus publiée sur l'hôte et reste accessible uniquement sur le réseau Docker interne
+- des healthchecks sont définis pour MediaMTX et le gateway
+
+Lancer la stack prod :
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Mettre à jour la stack prod :
+
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
 ## Ports exposés
 
 | Port | Protocole | Usage |
@@ -100,9 +124,9 @@ docker compose down
 | 8554 | TCP | RTSP ingest/lecture |
 | 8890 | UDP | SRT ingest |
 | 8189 | UDP | ICE / transport WebRTC |
-| 8888 | TCP | HLS via gateway Nginx |
+| 8888 | TCP | HLS via gateway Nginx en HTTPS |
 | 8889 | TCP | WebRTC WHEP/WHIP via gateway HTTPS |
-| 9997 | TCP | API MediaMTX |
+| 9997 | TCP | API MediaMTX, uniquement en dev ou sur réseau interne |
 
 ## Exemples d'utilisation
 
@@ -115,7 +139,7 @@ rtmp://localhost:1935/live/ma-voie
 ### Lire un flux HLS
 
 ```text
-http://localhost:8888/live/ma-voie/
+https://localhost:8888/live/ma-voie/
 ```
 
 ### Lire ou publier en WebRTC
@@ -176,10 +200,12 @@ Le User-Agent du navigateur n'est pas transmis par MediaMTX. Si un filtrage dép
 Variables utiles côté application :
 
 - `MEDIAMTX_API_URL=http://host.docker.internal:9997` pour piloter MediaMTX depuis un conteneur applicatif
-- `HLS_BASE_URL=http://localhost:8888` pour construire les URLs lues par le navigateur
+- `HLS_BASE_URL=https://localhost:8888` pour construire les URLs lues par le navigateur
 - base WebRTC via `https://<host>:8889`
 
 Si le front tourne hors Docker, adaptez les hôtes en conséquence.
+
+En prod, si un autre service doit consommer l'API MediaMTX, il doit rejoindre le même réseau Docker et utiliser `http://mediamtx:9997` au lieu d'un port publié sur l'hôte.
 
 ## Fichiers importants
 
@@ -190,6 +216,7 @@ Si le front tourne hors Docker, adaptez les hôtes en conséquence.
 
 ## Dépannage rapide
 
-- Si WebRTC ne fonctionne pas, vérifier la présence et la validité du certificat dans [certs/mediamtx](certs/mediamtx).
+- Si HLS ou WebRTC ne fonctionnent pas, vérifier la présence et la validité du certificat dans [certs/mediamtx](certs/mediamtx).
+- Les healthchecks du gateway utilisent `https://127.0.0.1:8888/healthz`; si vous remplacez le fichier [gateway/nginx.conf](gateway/nginx.conf), conservez cette route.
 - Si l'auth MediaMTX échoue, vérifier que `climbing-live` répond bien sur `http://host.docker.internal:3000` depuis le conteneur.
 - Si le worker FFmpeg semble bloqué, vérifier que `SOURCE_URL` et `TARGET_URL` sont renseignés.

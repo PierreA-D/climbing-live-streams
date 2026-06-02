@@ -1,25 +1,33 @@
 services:
   mediamtx:
     container_name: climbing-live-streaming-mediamtx
-    image: bluenviron/mediamtx:latest
+    image: bluenviron/mediamtx:1.18.2
     restart: unless-stopped
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
     ports:
-      - '1935:1935'   # RTMP ingest
-      - '8554:8554'   # RTSP ingest/read
+      - '1935:1935'     # RTMP ingest
+      - '8554:8554'     # RTSP ingest/read
       - '8890:8890/udp' # SRT ingest
       - '8189:8189/udp' # WebRTC ICE/UDP
-      - '9997:9997'   # MediaMTX API
+    expose:
+      - '9997'          # API MediaMTX interne uniquement
+    healthcheck:
+      test: ["CMD", "/mediamtx", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   webrtc-hls-gateway:
     container_name: climbing-live-streaming-gateway
-    image: nginx:1.27-alpine
+    image: nginx:1.30.2-alpine
     restart: unless-stopped
     depends_on:
-      - mediamtx
+      mediamtx:
+        condition: service_healthy
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs/mediamtx/server.crt:/etc/nginx/certs/server.crt:ro
@@ -27,6 +35,12 @@ services:
     ports:
       - '8888:8888'   # HLS HTTPS
       - '8889:8889'   # WebRTC HTTPS/WHEP/WHIP
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-check-certificate -q -O /dev/null https://127.0.0.1:8888/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   ffmpeg-worker:
     container_name: climbing-live-streaming-ffmpeg-worker
@@ -35,7 +49,8 @@ services:
     profiles:
       - workers
     depends_on:
-      - mediamtx
+      mediamtx:
+        condition: service_healthy
     environment:
       - SOURCE_URL=
       - TARGET_URL=
